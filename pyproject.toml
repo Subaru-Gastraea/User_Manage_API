@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "user-manage-api"
+version = "0.1.0"
+description = ""
+authors = ["Subaru <davidqxzz123@gmail.com>"]
+readme = "README.md"
+packages = [{include = "user_manage_api"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = {extras = ["all"], version = "^0.88.0"}
+alembic = "^1.9.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
