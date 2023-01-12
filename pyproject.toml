@@ -10,6 +10,7 @@ packages = [{include = "user_manage_api"}]
 python = "^3.10"
 fastapi = {extras = ["all"], version = "^0.88.0"}
 alembic = "^1.9.1"
+psycopg2 = "^2.9.5"
 
 
 [build-system]
