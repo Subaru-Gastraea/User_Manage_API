@@ -18,13 +18,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-
-# Append the path of models.py to system path
-import sys, os
-ENV_PY_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(ENV_PY_DIR))
-
-import models
+from sql_app import models
 target_metadata = models.User.metadata
 
 # other values from the config, defined by the needs of env.py,
