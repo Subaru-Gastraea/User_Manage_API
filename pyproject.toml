@@ -11,6 +11,9 @@ python = "^3.10"
 fastapi = {extras = ["all"], version = "^0.88.0"}
 alembic = "^1.9.1"
 psycopg2 = "^2.9.5"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-multipart = "^0.0.5"
 
 
 [tool.poetry.group.dev.dependencies]
