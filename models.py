@@ -8,6 +8,6 @@ class User(Base):
 
     name = Column(String, primary_key=True)
     passwd = Column(String, nullable=False)
-    birthday = Column(Date)
+    birthday = Column(Date) # default: nullable=False
     createT = Column(DateTime, default = datetime.utcnow())
     last_login = Column(DateTime, nullable=True)
