@@ -23,7 +23,7 @@ def get_db():
 def read_user(name: str = Form(), db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_name=name)
     if db_user is None:
-        raise HTTPException(status_code=400, detail="Bad request")
+        raise HTTPException(status_code=400, detail="User not found")
         
     return db_user
 
@@ -32,7 +32,7 @@ def read_user(name: str = Form(), db: Session = Depends(get_db)):
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_name=user.name)
     if db_user:
-        raise HTTPException(status_code=400, detail="Bad request")
+        raise HTTPException(status_code=400, detail="User name already registered")
     
     crud.create_user(db=db, user=user)
 
