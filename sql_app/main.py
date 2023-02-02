@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, Form, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import datetime, timedelta
+from datetime import timedelta
 from jose import JWTError
 
 from . import crud, models, schemas, util
@@ -21,7 +21,7 @@ def get_db():
     finally:
         db.close()
 
-async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def Auth_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -90,4 +90,18 @@ def delete_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user),
     crud.delete_user(db=db, user_name=name)
 
 # Update password & birthday
-# @app.patch("/user/")
+@app.patch("/user/")
+def update_user(user: schemas.UserModify, cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
+    db_user = crud.get_user(db=db, user_name=user.name)
+    if db_user is None:
+        raise HTTPException(status_code=400, detail="User not found")
+
+    # Avoid empty value
+    if user.birthday is None:
+        user.birthday = db_user.birthday
+    if user.password is None:
+        user.password = db_user.passwd
+    else:
+        user.password = util.get_password_hash(user.password)
+
+    crud.update_user(db=db, user=user)
