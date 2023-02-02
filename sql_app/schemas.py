@@ -15,6 +15,11 @@ class User(UserBase):
     class Config:
         orm_mode = True
 
+class UserModify(BaseModel):
+    name: str
+    birthday: date | None = None
+    password: str | None = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
