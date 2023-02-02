@@ -25,6 +25,12 @@ def delete_user(db: Session, user_name: str):
     db.query(models.User).filter(models.User.name == user_name).delete(synchronize_session="fetch")
     db.commit()
 
+def update_user(db: Session, user: schemas.UserModify):
+    db.query(models.User).filter(models.User.name == user.name).update(
+        {"birthday": user.birthday, "passwd": user.password}, synchronize_session="fetch"
+    )
+    db.commit()
+
 def user_login(db: Session, user_name: str):
     db.query(models.User).filter(models.User.name == user_name).update(
         {"last_login": datetime.utcnow()}, synchronize_session="fetch"
