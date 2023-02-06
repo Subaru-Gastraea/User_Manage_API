@@ -37,7 +37,11 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = D
     except JWTError:
         raise credentials_exception
     
-    user = crud.get_user(db, username=token_data.username)
+    try:
+        user = crud.get_user(db=db, user_name=token_data.username)
+    except:
+        raise RuntimeError("Cannot get user " + token_data.username)
+    
     if user is None:
         raise credentials_exception
     
