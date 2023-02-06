@@ -21,7 +21,7 @@ def get_db():
     finally:
         db.close()
 
-async def Auth_current_user(token: str = Depends(oauth2_scheme)):
+async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -37,12 +37,16 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    return token_data.username
+    user = crud.get_user(db, username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    
+    return user
 
 # Test
 @app.get("/api")
 async def welcomeMsg():
-    return {"message": "hello from fastapi"}
+    return {"message": "User Manage Website"}
 
 # Login
 @app.post("/login", response_model=schemas.Token)
@@ -69,12 +73,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 # Get user data
 @app.get("/user/", response_model=schemas.User, status_code=200)
-def read_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
-    db_user = crud.get_user(db=db, user_name=name)
-    if db_user is None:
-        raise HTTPException(status_code=400, detail="User not found")
-        
-    return db_user
+async def read_user(cur_user: schemas.User = Depends(Auth_current_user)):
+    return cur_user
 
 # Create user
 @app.post("/user/", status_code=200)
@@ -87,7 +87,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 # Delete user
 @app.delete("/user/", status_code=200)
-def delete_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
+def delete_user(name: str = Form(), cur_user: schemas.User = Depends(Auth_current_user), db: Session = Depends(get_db)):
     db_user = crud.get_user(db=db, user_name=name)
     if db_user is None:
         raise HTTPException(status_code=400, detail="User not found")
@@ -96,7 +96,7 @@ def delete_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user),
 
 # Update password & birthday
 @app.patch("/user/")
-def update_user(user: schemas.UserModify, cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
+def update_user(user: schemas.UserModify, cur_user: schemas.User = Depends(Auth_current_user), db: Session = Depends(get_db)):
     db_user = crud.get_user(db=db, user_name=user.name)
     if db_user is None:
         raise HTTPException(status_code=400, detail="User not found")
