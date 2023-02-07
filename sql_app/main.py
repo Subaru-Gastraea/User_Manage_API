@@ -1,14 +1,14 @@
 from fastapi import Depends, FastAPI, HTTPException, Form, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from jose import JWTError
 
 from . import crud, models, schemas, util
 from .database import SessionLocal, engine
 models.Base.metadata.create_all(bind=engine)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -31,9 +31,10 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = D
     try:
         payload = util.get_token_data(token)   # Decode the JWT token returned by "/login" endpoint
         username: str = payload.get("sub")
+        expires = payload.get("exp")
         if username is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
+        token_data = schemas.TokenData(username=username, expires=expires)
     except JWTError:
         raise credentials_exception
     
@@ -43,6 +44,12 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = D
         raise RuntimeError("Cannot get user " + token_data.username)
     
     if user is None:
+        raise credentials_exception
+    
+    # check token expiration
+    if expires is None:
+        raise credentials_exception
+    if datetime.now(timezone.utc) > token_data.expires:
         raise credentials_exception
     
     return user
@@ -114,3 +121,11 @@ def update_user(user: schemas.UserModify, cur_user: schemas.User = Depends(Auth_
         user.password = util.get_password_hash(user.password)
 
     crud.update_user(db=db, user=user)
+
+    # Refresh access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = util.create_access_token(
+        data={"sub": cur_user.name}, expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
