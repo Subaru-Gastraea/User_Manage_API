@@ -54,11 +54,6 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = D
     
     return user
 
-# Test
-@app.get("/api")
-async def welcomeMsg():
-    return {"message": "User Manage Website"}
-
 # Login
 @app.post("/login", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
