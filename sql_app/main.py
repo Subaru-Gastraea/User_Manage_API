@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, Form, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from jose import JWTError
 
 from . import crud, models, schemas, util
@@ -21,7 +21,7 @@ def get_db():
     finally:
         db.close()
 
-async def Auth_current_user(token: str = Depends(oauth2_scheme)):
+async def Auth_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -31,13 +31,28 @@ async def Auth_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = util.get_token_data(token)   # Decode the JWT token returned by "/login" endpoint
         username: str = payload.get("sub")
+        expires = payload.get("exp")
         if username is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
+        token_data = schemas.TokenData(username=username, expires=expires)
     except JWTError:
         raise credentials_exception
     
-    return token_data.username
+    try:
+        user = crud.get_user(db=db, user_name=token_data.username)
+    except:
+        raise RuntimeError("Cannot get user " + token_data.username)
+    
+    if user is None:
+        raise credentials_exception
+    
+    # check token expiration
+    if expires is None:
+        raise credentials_exception
+    if datetime.now(timezone.utc) > token_data.expires:
+        raise credentials_exception
+    
+    return user
 
 # Login
 @app.post("/login", response_model=schemas.Token)
@@ -64,12 +79,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 # Get user data
 @app.get("/user/", response_model=schemas.User, status_code=200)
-def read_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
-    db_user = crud.get_user(db=db, user_name=name)
-    if db_user is None:
-        raise HTTPException(status_code=400, detail="User not found")
-        
-    return db_user
+async def read_user(cur_user: schemas.User = Depends(Auth_current_user)):
+    return cur_user
 
 # Create user
 @app.post("/user/", status_code=200)
@@ -82,7 +93,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 # Delete user
 @app.delete("/user/", status_code=200)
-def delete_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
+def delete_user(name: str = Form(), cur_user: schemas.User = Depends(Auth_current_user), db: Session = Depends(get_db)):
     db_user = crud.get_user(db=db, user_name=name)
     if db_user is None:
         raise HTTPException(status_code=400, detail="User not found")
@@ -91,7 +102,7 @@ def delete_user(name: str = Form(), cur_uname: str = Depends(Auth_current_user),
 
 # Update password & birthday
 @app.patch("/user/")
-def update_user(user: schemas.UserModify, cur_uname: str = Depends(Auth_current_user), db: Session = Depends(get_db)):
+def update_user(user: schemas.UserModify, cur_user: schemas.User = Depends(Auth_current_user), db: Session = Depends(get_db)):
     db_user = crud.get_user(db=db, user_name=user.name)
     if db_user is None:
         raise HTTPException(status_code=400, detail="User not found")
@@ -105,3 +116,11 @@ def update_user(user: schemas.UserModify, cur_uname: str = Depends(Auth_current_
         user.password = util.get_password_hash(user.password)
 
     crud.update_user(db=db, user=user)
+
+    # Refresh access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = util.create_access_token(
+        data={"sub": cur_user.name}, expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
