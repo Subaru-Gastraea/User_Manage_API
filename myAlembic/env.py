@@ -25,7 +25,17 @@ target_metadata = models.User.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+import os
+from dotenv import load_dotenv
 
+# load environment variables from .env file
+load_dotenv()
+db_user = os.environ['DB_USER']
+db_password = os.environ['DB_PASSWORD']
+db_host = os.environ['DB_HOST']
+db_port = os.environ['DB_PORT']
+db_name = os.environ['DB_NAME']
+config.set_main_option('sqlalchemy.url', f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  db:
+    container_name: userDB
+    build:
+      context: .
+      dockerfile: DockerFile.db
+    restart: always
+    ports:
+      - "5432:5432"
+  pgadmin:
+    container_name: userDB_pgadmin4
+    build:
+      context: .
+      dockerfile: DockerFile.pgadmin
+    restart: always
+    ports:
+      - "5050:80"
